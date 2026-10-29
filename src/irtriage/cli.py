@@ -57,8 +57,27 @@ def main(argv=None):
     p.add_argument("--labels")
     p.add_argument("-o", "--out", required=True)
 
+    p = sub.add_parser("orf", help="scored events -> longest ORF per retained-intron transcript (orfipy + Biopython)")
+    p.add_argument("--scored", required=True, help="output of `irtriage score`/`run` (0-based start/end)")
+    p.add_argument("--gtf", required=True, help="GTF containing the exons of the transcripts in the table")
+    p.add_argument("--fasta", required=True, help="indexed genome FASTA")
+    p.add_argument("--calls", default="real_IR", help="comma-separated calls to process (default: real_IR)")
+    p.add_argument("--min-orf-aa", type=int, default=30)
+    p.add_argument("--start-codons", default="ATG", help="comma-separated start codons (default: ATG)")
+    p.add_argument("--allow-partial", action="store_true", help="also accept ORFs that run off the 3' end")
+    p.add_argument("--tol", type=int, default=0, help="bp tolerance when matching the intron to GTF exons")
+    p.add_argument("--outdir", required=True)
+
     a = ap.parse_args(argv)
-    if a.cmd == "extract":
+    if a.cmd == "orf":
+        from .orf import run_orf_step
+
+        table = run_orf_step(
+            pd.read_csv(a.scored, sep="\t"), a.gtf, a.fasta, a.outdir, tuple(a.calls.split(",")),
+            a.min_orf_aa, a.start_codons, a.allow_partial, a.tol,
+        )
+        print(table.orf_status.value_counts().to_string(), file=sys.stderr)
+    elif a.cmd == "extract":
         _run_extract(a).to_csv(a.out, sep="\t", index=False)
     elif a.cmd == "score":
         _write_scored(pd.read_csv(a.events, sep="\t"), a.labels, a.out)

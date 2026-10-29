@@ -35,6 +35,37 @@ irtriage extract --bam sample.bam --table ir_events.tsv --fasta genome.fa -o evi
 irtriage score   --events evidence.tsv [--labels validated.tsv] -o ir_scored.tsv
 ```
 
+## ORF step: retained-intron protein for AlphaFold
+
+```bash
+pip install -e ".[orf]"      # orfipy (needs a C compiler) + biopython
+irtriage orf --scored ir_scored.tsv --gtf annotation.gtf --fasta genome.fa \
+    --calls real_IR --outdir orf_out
+```
+
+For each selected event, the transcript's exons are taken from the GTF and the two
+exons flanking the intron are merged with the intron sequence between them. Both the
+spliced reference and the intron-retained transcript are written in sense orientation
+to `transcripts.fa`, and `orfipy` finds ORFs (forward strand, ATG start by default,
+`--min-orf-aa 30`). Biopython then translates the ORFs and picks the longest per
+transcript (ties go to complete ORFs, then the earliest start).
+
+Outputs in `--outdir`:
+
+* `ir_proteins.faa` / `ref_proteins.faa`: longest-ORF proteins, ready for AlphaFold or ColabFold
+* `longest_orfs.tsv`: per event, ORF length, whether the ORF overlaps or spans the intron,
+  `stop_in_intron` (premature stop introduced by retention), `nmd_candidate`
+  (stop >50 nt upstream of the last exon junction), `protein_identical_to_ref`,
+  `shared_nterm_aa` and `ir_novel_tail_aa`
+* `orf_status`: `ok`, `no_orf`, `transcript_not_in_gtf`, or
+  `the_intron_is_not_an_annotated_intron_of_this_transcript` (novel transcripts that
+  are absent from the GTF are skipped; pass an isoform-caller GTF containing them,
+  and use `--tol` to allow small coordinate differences)
+
+The scored table already holds 0-based half-open coordinates, so `orf` reads it directly.
+The longest ORF is not guaranteed to use the annotated start codon. Compare it with
+`ref_proteins.faa`, and check `shared_nterm_aa` before trusting it as the real product.
+
 ## Read classes (per intron)
 
 | class | meaning |

@@ -12,7 +12,8 @@ license = { text = "MIT" }
 dependencies = ["pysam>=0.21", "pandas>=1.5", "numpy>=1.23", "scikit-learn>=1.2"]
 
 [project.optional-dependencies]
-test = ["pytest"]
+orf = ["orfipy", "biopython"]
+test = ["pytest", "orfipy", "biopython"]
 
 [project.scripts]
 irtriage = "irtriage.cli:main"
